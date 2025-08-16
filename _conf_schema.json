@@ -1,0 +1,32 @@
+{
+  "analysis_interval_seconds": {
+    "type": "int",
+    "description": "聊天记录分析频率（秒）",
+    "hint": "插件每隔多少秒对积累的聊天记录进行一次学习分析。默认值为 3600 (1小时)。",
+    "default": 3600
+  },
+  "maintenance_interval_seconds": {
+    "type": "int",
+    "description": "风格维护任务频率（秒）",
+    "hint": "插件每隔多少秒进行一次熟练度衰减和数据清理。默认值为 86400 (24小时)。",
+    "default": 86400
+  },
+  "min_history_for_analysis": {
+    "type": "int",
+    "description": "触发分析的最少消息数",
+    "hint": "当一个会话的聊天记录达到此数量时，才会被纳入学习分析。默认值为 10。",
+    "default": 10
+  },
+  "max_styles_per_session": {
+    "type": "int",
+    "description": "每个会话的最大记忆容量",
+    "hint": "每个独立的聊天（私聊/群聊）最多可以学习和记忆多少条风格。超过此限制将优先忘记熟练度最低的。默认值为 100。",
+    "default": 100
+  },
+  "proficiency_decay_rate": {
+    "type": "int",
+    "description": "熟练度每日衰减值",
+    "hint": "每个学习到的风格每天会降低多少熟练度。默认值为 1。",
+    "default": 1
+  }
+}
