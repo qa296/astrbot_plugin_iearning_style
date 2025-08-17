@@ -1,5 +1,5 @@
 name: astrbot_plugin_iearning_style
-desc: 从聊天中学习他人说话方式。
-version: v0.1.0
+desc: 使机器人可以从聊天中学习他人说话方式
+version: v0.1.1
 author: qa296
 repo: https://github.com/qa296/astrbot_plugin_iearning_style
