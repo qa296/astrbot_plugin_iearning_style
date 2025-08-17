@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import asyncio
 from astrbot.api import logger
 from .data_manager import DataManager
@@ -26,16 +25,27 @@ class Scheduler:
             self.maintenance_task = asyncio.create_task(self._run_maintenance())
             logger.info("定时任务已启动。")
 
-    def stop(self):
+    async def stop(self):
         """
         停止所有定时任务。
         """
         if self.is_running:
             self.is_running = False
+            tasks = []
             if self.analysis_task:
                 self.analysis_task.cancel()
+                tasks.append(self.analysis_task)
             if self.maintenance_task:
                 self.maintenance_task.cancel()
+                tasks.append(self.maintenance_task)
+            
+            # 等待任务完全停止
+            if tasks:
+                try:
+                    await asyncio.gather(*tasks, return_exceptions=True)
+                except asyncio.CancelledError:
+                    pass
+            
             logger.info("定时任务已停止。")
 
     async def _run_analysis(self):
@@ -50,8 +60,11 @@ class Scheduler:
             for session_id in all_sessions:
                 try:
                     await self.learning_manager.analyze_and_learn(session_id)
+                    await asyncio.sleep(0)  # 让出控制权，避免阻塞
                 except Exception as e:
                     logger.error(f"分析会话 {session_id} 时出错: {e}")
+            # 分析完成后保存数据
+            await self.data_manager.force_save()
 
     async def _run_maintenance(self):
         """
@@ -61,14 +74,21 @@ class Scheduler:
         while self.is_running:
             await asyncio.sleep(maintenance_interval)
             logger.info("开始执行周期性风格维护...")
-            await self._perform_decay()
-            await self._perform_cleanup()
+            await self._perform_maintenance()
+            await asyncio.sleep(0)  # 让出控制权，避免阻塞
+
+    async def _perform_maintenance(self):
+        """
+        执行风格维护：衰减和清理操作，最后统一保存。
+        """
+        await self.data_manager.perform_maintenance(self.config)
+        logger.info("风格维护完成（衰减+清理）。")
 
     async def _perform_decay(self):
         """
         对所有风格的熟练度进行衰减。
         """
-        current_time = asyncio.get_event_loop().time()
+        current_time = asyncio.get_running_loop().time()
         decay_rate = self.config.get("proficiency_decay_rate", 1)
         for session_id, styles in self.data_manager.styles.items():
             for style in styles:

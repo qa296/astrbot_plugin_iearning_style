@@ -57,18 +57,22 @@ class LearningManager:
         """
         history_str = "\n".join([f"{msg['sender']}: {msg['content']}" for msg in chat_history])
         prompt = f"""
-        请分析以下聊天记录：
-        ---
+        请分析以下聊天记录，并提取语言风格和语法句式特点：
+
+        聊天记录：
+        ```
         {history_str}
-        ---
-        请总结出其中体现的语言风格和语法句式特点。
-        请以JSON格式返回，包含两个键 'language_style' 和 'grammar_feature'，
-        每个键对应一个字符串列表，其中包含具体的风格或特点描述。
-        例如：
-        {{
-            "language_style": ["喜欢使用emoji", "经常使用网络流行语"],
-            "grammar_feature": ["句子偏短", "偶尔使用倒装句"]
-        }}
+        ```
+
+        要求：
+        1. 只返回有效的JSON格式，不要包含任何解释性文字
+        2. 使用以下严格格式：
+        {{"language_style": ["特点1", "特点2"], "grammar_feature": ["特点1", "特点2"]}}
+        3. 每个数组至少包含1个特点，最多包含5个特点
+        4. 特点描述要简洁明了，每个不超过20个字
+
+        示例输出：
+        {{"language_style": ["爱用表情包", "语气活泼"], "grammar_feature": ["多用短句", "爱用感叹号"]}}
         """
         return prompt
 
@@ -80,8 +84,17 @@ class LearningManager:
         :param llm_output: LLM返回的文本内容。
         """
         try:
-            # 尝试从LLM输出中提取JSON
-            json_str = llm_output[llm_output.find('{'):llm_output.rfind('}')+1]
+            # 使用正则表达式更精确地提取JSON
+            import re
+            json_pattern = r'```json\s*(\{.*?\})\s*```|(\{.*?\})'
+            match = re.search(json_pattern, llm_output, re.DOTALL)
+            
+            if match:
+                json_str = match.group(1) if match.group(1) else match.group(2)
+            else:
+                # 回退到原始方法
+                json_str = llm_output[llm_output.find('{'):llm_output.rfind('}')+1]
+            
             results = json.loads(json_str)
             
             language_styles = results.get("language_style", [])

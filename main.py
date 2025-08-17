@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 import asyncio
-import time
 from astrbot.api.event import filter, AstrMessageEvent
 from astrbot.api.star import Context, Star, register
 from astrbot.api import logger
+from astrbot.api.star import StarTools
 
 from .learning_style.data_manager import DataManager
 from .learning_style.learning_manager import LearningManager
@@ -14,8 +14,10 @@ class IearningStylePlugin(Star):
     def __init__(self, context: Context, config: dict):
         super().__init__(context)
         self.config = config
+        # 获取规范的数据目录
+        plugin_data_dir = StarTools.get_data_dir("astrbot_plugin_iearning_style")
         # 初始化插件的核心组件
-        self.data_manager = DataManager()
+        self.data_manager = DataManager(plugin_data_dir)
         self.learning_manager = LearningManager(self, self.data_manager, self.config)
         self.scheduler = Scheduler(self.data_manager, self.learning_manager, self.config)
 
@@ -44,7 +46,7 @@ class IearningStylePlugin(Star):
         message = {
             "sender": event.get_sender_name(),
             "content": message_content,
-            "timestamp": time.time()
+            "timestamp": asyncio.get_running_loop().time()
         }
         
         await self.data_manager.add_message_to_history(session_id, message)
@@ -53,5 +55,7 @@ class IearningStylePlugin(Star):
         """
         异步的插件销毁方法，当插件被卸载/停用时会调用。
         """
-        self.scheduler.stop()
+        await self.scheduler.stop()
+        # 插件卸载时保存所有数据
+        await self.data_manager.force_save()
         logger.info("学习风格插件已卸载并停止定时任务。")
