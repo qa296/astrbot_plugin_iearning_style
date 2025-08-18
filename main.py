@@ -8,6 +8,7 @@ from astrbot.api.star import StarTools
 from .learning_style.data_manager import DataManager
 from .learning_style.learning_manager import LearningManager
 from .learning_style.scheduler import Scheduler
+from .learning_style.style_injector import StyleInjector
 
 @register("astrbot_plugin_iearning_style", "qa296", "从聊天中学习他人说话方式。", "0.1.0", "https://github.com/qa296/astrbot_plugin_iearning_style")
 class IearningStylePlugin(Star):
@@ -20,6 +21,7 @@ class IearningStylePlugin(Star):
         self.data_manager = DataManager(plugin_data_dir)
         self.learning_manager = LearningManager(self, self.data_manager, self.config)
         self.scheduler = Scheduler(self.data_manager, self.learning_manager, self.config)
+        self.style_injector = StyleInjector(self.data_manager, self.config)
 
     async def initialize(self):
         """
@@ -50,6 +52,57 @@ class IearningStylePlugin(Star):
         }
         
         await self.data_manager.add_message_to_history(session_id, message)
+
+    @filter.on_llm_request()
+    async def on_llm_request(self, event: AstrMessageEvent, req):
+        """
+        在LLM请求前拦截并注入学习到的风格。
+        """
+        session_id = event.unified_msg_origin
+        
+        # 注入风格到system prompt
+        original_prompt = req.system_prompt or ""
+        new_prompt = self.style_injector.inject_style_to_prompt(session_id, original_prompt)
+        req.system_prompt = new_prompt
+
+    @filter.command("风格状态")
+    async def style_status(self, event: AstrMessageEvent):
+        """
+        查看当前会话的风格学习状态。
+        """
+        session_id = event.unified_msg_origin
+        summary = self.style_injector.get_style_summary(session_id)
+        
+        if not summary["has_styles"]:
+            yield event.plain_result("当前会话还没有学习到任何风格特点。")
+            return
+            
+        response = f"当前会话风格状态：\n"
+        response += f"总学习风格数：{summary['total_styles']}\n"
+        response += f"高熟练度风格：{summary['high_proficiency_styles']}\n"
+        
+        if summary['language_styles']:
+            response += f"语言风格：{', '.join(summary['language_styles'])}\n"
+            
+        if summary['grammar_features']:
+            response += f"语法特征：{', '.join(summary['grammar_features'])}\n"
+            
+        yield event.plain_result(response.strip())
+
+    @filter.command("清空风格")
+    async def clear_styles(self, event: AstrMessageEvent):
+        """
+        清空当前会话学习到的所有风格。
+        """
+        session_id = event.unified_msg_origin
+        
+        # 清空风格数据
+        if session_id in self.data_manager.styles:
+            self.data_manager.styles[session_id] = []
+            self.data_manager._dirty_styles = True
+            asyncio.create_task(self.data_manager.save_styles())
+            
+        yield event.plain_result("已清空当前会话的所有学习风格。")
 
     async def terminate(self):
         """

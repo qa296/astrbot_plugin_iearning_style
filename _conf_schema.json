@@ -28,5 +28,23 @@
     "description": "熟练度每日衰减值",
     "hint": "每个学习到的风格每天会降低多少熟练度。默认值为 1。",
     "default": 1
+  },
+  "enable_style_injection": {
+    "type": "bool",
+    "description": "启用风格注入",
+    "hint": "是否自动将学习到的风格注入到机器人的回复中。开启后，机器人会根据当前会话的聊天风格调整自己的回复方式。",
+    "default": true
+  },
+  "min_proficiency_for_injection": {
+    "type": "int",
+    "description": "风格注入的最小熟练度",
+    "hint": "只有当风格的熟练度达到或超过此值时，才会被用于风格注入。默认值为 15。",
+    "default": 15
+  },
+  "max_styles_in_prompt": {
+    "type": "int",
+    "description": "每次回复最多使用的风格数",
+    "hint": "在生成回复时，最多同时使用多少个学习到的风格特点。过多的风格可能会影响回复质量。默认值为 3。",
+    "default": 3
   }
 }
