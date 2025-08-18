@@ -10,7 +10,7 @@ from .learning_style.learning_manager import LearningManager
 from .learning_style.scheduler import Scheduler
 from .learning_style.style_injector import StyleInjector
 
-@register("astrbot_plugin_iearning_style", "qa296", "从聊天中学习他人说话方式。", "0.1.0", "https://github.com/qa296/astrbot_plugin_iearning_style")
+@register("astrbot_plugin_iearning_style", "qa296", "从聊天中学习他人说话方式。", "0.1.2", "https://github.com/qa296/astrbot_plugin_iearning_style")
 class IearningStylePlugin(Star):
     def __init__(self, context: Context, config: dict):
         super().__init__(context)
