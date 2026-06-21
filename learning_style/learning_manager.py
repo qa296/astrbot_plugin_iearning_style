@@ -140,11 +140,11 @@ class LearningManager:
 
     async def _parse_and_store_results(self, session_id: str, llm_output: str):
         try:
-            json_pattern = r"```json\s*(\{.*?\})\s*```|(\{.*?\})"
+            json_pattern = r"```json\s*(\{.*?\})\s*```"
             match = re.search(json_pattern, llm_output, re.DOTALL)
 
             if match:
-                json_str = match.group(1) if match.group(1) else match.group(2)
+                json_str = match.group(1)
             else:
                 json_str = llm_output[llm_output.find("{") : llm_output.rfind("}") + 1]
 
