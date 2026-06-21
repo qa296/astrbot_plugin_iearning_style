@@ -130,18 +130,17 @@ class LearningManager:
 }}
 
 3. universal 是"这个群整体说话是什么风格"——语气、用词习惯、聊天氛围。属于全群底色。
-   至少1条最多10条，每条不超过20字。如果已有上一轮，从中保留合适的并加入新的。
+   至少1条最多10条。如果已有上一轮，从中保留合适的并加入新的。
 
 4. contextual 是"群内存在什么社交模式"——某个场景出现时，群友会有怎样的固定反应。
    格式为 scene（触发条件）→ behavior（群体反应）。没有则留空。
-   这是三层中最关键的一层。
 
 5. specific 是"群里在用什么内部梗/暗号/流行语"——带释义，让外人也能理解。
    content 包含释义（如"xx（用于表达xxx）"），trigger_regex 是能匹配用户相关表达的正则。
    trigger_regex 必须是合法正则。没有则留空。
 
 示例输出：
-{{"universal": ["爱用表情包", "喜欢玩烂梗", "语气夸张"], "contextual": [{{"scene": "有人发消息", "behavior": "全员复读"}}, {{"scene": "群友自称萌新", "behavior": "不约而同装萌新"}], "specific": "content": "xx（表达喜欢的意思）", "trigger_regex": "xx|x"}}]}}
+{{"universal": ["爱用表情包", "喜欢玩烂梗", "语气夸张"], "contextual": [{{"scene": "有人发消息", "behavior": "全员复读"}}, {{"scene": "群友自称萌新", "behavior": "假装也是萌新"}}], "specific": [{{"content": "xx（表达喜欢的意思）", "trigger_regex": "xx|x"}}]}}
 """
         return prompt
 
