@@ -11,8 +11,8 @@ from .data_manager import DataManager
 class LearningManager:
     """
     负责调用 LLM 进行学习和总结。
-    输入：[本轮对话] + [上轮通用表征] + [待升格特定表征提示]
-    输出：{universal: [...], specific: [{content, trigger_regex}, ...]}
+    输入：[本轮对话] + [上轮通用表征] + [待升格特定提示] + [情境缓冲区提示]
+    输出：{universal, contextual, specific}
     """
 
     def __init__(self, star_instance: Star, data_manager: DataManager, config: dict):
@@ -22,22 +22,18 @@ class LearningManager:
         self.config = config
 
     async def analyze_and_learn(self, session_id: str):
-        """
-        分析指定会话的聊天记录，提取通用和特定表征。
-        """
         min_history = self.config.get("min_history_for_analysis", 10)
         chat_history = self.data_manager.get_chat_history(session_id, limit=100)
         if len(chat_history) < min_history:
             return
 
-        # 构建 prompt
         prompt = self._build_prompt(session_id, chat_history)
 
         try:
             llm_response = await self.context.get_using_provider().text_chat(
                 prompt=prompt,
                 contexts=[],
-                system_prompt="你是一个语言风格分析大师，请根据以下聊天记录，提取通用风格和特定说法。",
+                system_prompt="你是一个语言风格分析大师，请根据以下聊天记录，提取通用风格、场景行为和梗释义。",
             )
 
             if llm_response.role == "assistant":
@@ -54,26 +50,17 @@ class LearningManager:
     def _build_prompt(
         self, session_id: str, chat_history: list[dict[str, Any]]
     ) -> str:
-        """
-        构建 LLM 分析 prompt。
-        - 包含本轮聊天记录
-        - 如果已有通用表征，附加上一轮结果供 LLM 重写
-        - 如果有待升格的特定表征，附加提示
-        """
         history_str = "\n".join(
             [f"{msg['sender']}: {msg['content']}" for msg in chat_history]
         )
 
-        # 获取上一轮通用表征
         universal = self.data_manager.get_universal_for_session(session_id)
-        universal_str = ""
-        if universal:
-            contents = [t["content"] for t in universal]
-            universal_str = "\n".join([f"- {c}" for c in contents])
-        else:
-            universal_str = "(无)"
+        universal_list = [t["content"] for t in universal] if universal else []
+        universal_str = "\n".join(
+            [f"- {c}" for c in universal_list]
+        ) if universal_list else "(无)"
 
-        # 获取待升格的特定表征
+        # 待升格特定表征
         threshold = self.config.get("specific_promotion_threshold", 5)
         promotion_candidates = self.data_manager.get_specific_for_promotion(
             session_id, threshold
@@ -86,10 +73,18 @@ class LearningManager:
             ]
             promotion_str = "\n".join(lines)
 
-        first_round = not bool(universal)
+        # 情境缓冲区提示
+        buffer_items = self.data_manager.get_contextual_buffer(session_id)
+        contextual_hint = ""
+        if buffer_items:
+            lines = [
+                f"- {t['scene']}→{t['behavior']}" for t in buffer_items
+            ]
+            contextual_hint = "\n".join(lines)
+
+        first_round = not universal_list
 
         if first_round:
-            # 第一轮：无历史通用，全产出通用
             prompt = f"""
 请分析以下聊天记录，提取语言特征。
 
@@ -103,18 +98,16 @@ class LearningManager:
 2. 格式：
 {{
   "universal": ["特征1", "特征2"],
+  "contextual": [],
   "specific": []
 }}
-3. universal 是从聊天中观察到的稳定语言风格特征（用词习惯、语气、句式等）
-4. 每条特征描述简洁明了，不超过 20 个字
-5. universal 至少包含 1 条，最多 10 条
-6. specific 在第一轮固定为空数组
+3. universal 是稳定的通用风格基调（用词习惯、语气、句式和聊天中的应对习惯等），至少1条最多10条，每条不超过20字
+4. contextual 和 specific 在第一轮固定为空数组
 
 示例输出：
-{{"universal": ["语气活泼", "爱用短句", "喜欢加表情"], "specific": []}}
+{{"universal": ["语气活泼", "爱用短句", "喜欢加表情"], "contextual": [], "specific": []}}
 """
         else:
-            # 后续轮次：带上轮通用 + 待升格提示
             promotion_section = ""
             if promotion_str:
                 promotion_section = f"""
@@ -122,8 +115,15 @@ class LearningManager:
 {promotion_str}
 """
 
+            contextual_section = ""
+            if contextual_hint:
+                contextual_section = f"""
+以下情境表征在观察中，判断是否可以合并到通用风格或特定梗释义中：
+{contextual_hint}
+"""
+
             prompt = f"""
-请分析以下聊天记录，提取两类特征。
+请分析以下聊天记录，提取三类特征。
 
 聊天记录：
 ```
@@ -134,31 +134,33 @@ class LearningManager:
 {universal_str}
 
 {promotion_section}
+{contextual_section}
 要求：
 1. 只返回有效的 JSON，不要包含任何解释性文字
 2. 格式：
 {{
   "universal": ["特征1", "特征2"],
+  "contextual": [
+    {{"scene": "场景描述", "behavior": "行为描述"}},
+    ...
+  ],
   "specific": [
-    {{"content": "特征描述", "trigger_regex": "触发正则"}},
+    {{"content": "梗+释义", "trigger_regex": "正则"}},
     ...
   ]
 }}
-3. universal 是稳定风格特征，应从"上一轮通用"中保留合适的并可以加入新的
-4. specific 是仅本轮出现的具体说法/梗/流行语
-5. trigger_regex 是能匹配用户相关表达的正则表达式（如 "awsl" 对应 "awsl|啊我死了"）
+3. universal 是稳定风格基调，从"上一轮通用"中保留合适的并可以加入新的
+4. contextual 是场景→行为模式，描述在某种社交场景下会怎么反应（如"别人难过时"→"发猫猫图安慰"）；scene 是触发条件，behavior 是具体反应；每条不超过20字
+5. specific 是具体梗/说法，content 包含释义（如"awsl（啊我死了，用于表达被可爱到）"），trigger_regex 是能匹配用户相关表达的正则
 6. trigger_regex 必须是合法正则
-7. 每条特征描述不超过 20 个字
+7. 如果情境表征无法抽象为通用风格或具体梗，请保留在 contextual 中
 
 示例输出：
-{{"universal": ["语气活泼", "喜欢玩梗"], "specific": [{{"content": "awsl", "trigger_regex": "awsl|啊我死了"}}]}}
+{{"universal": ["语气活泼", "喜欢玩梗"], "contextual": [{{"scene": "别人难过时", "behavior": "发猫猫图安慰"}}], "specific": [{{"content": "awsl（啊我死了）", "trigger_regex": "awsl|啊我死了"}}]}}
 """
         return prompt
 
     async def _parse_and_store_results(self, session_id: str, llm_output: str):
-        """
-        解析 LLM 输出，存储通用和特定表征。
-        """
         try:
             json_pattern = r"```json\s*(\{.*?\})\s*```|(\{.*?\})"
             match = re.search(json_pattern, llm_output, re.DOTALL)
@@ -174,8 +176,20 @@ class LearningManager:
             universal = results.get("universal", [])
             if universal:
                 self.data_manager.replace_universal(session_id, universal)
+                logger.info(f"为会话 {session_id} 更新通用表征: {universal}")
+
+            # 情境表征：逐条添加
+            contextual = results.get("contextual", [])
+            for item in contextual:
+                scene = item.get("scene", "")
+                behavior = item.get("behavior", "")
+                if scene and behavior:
+                    self.data_manager.add_contextual(session_id, scene, behavior)
+
+            if contextual:
                 logger.info(
-                    f"为会话 {session_id} 更新通用表征: {universal}"
+                    f"为会话 {session_id} 添加情境表征: "
+                    f"{[f'{c['scene']}→{c['behavior']}' for c in contextual]}"
                 )
 
             # 特定表征：逐条添加
@@ -193,7 +207,6 @@ class LearningManager:
                     f"为会话 {session_id} 添加特定表征: {[s['content'] for s in specific]}"
                 )
 
-            # 检查特定表征容量
             self.data_manager.check_specific_capacity(session_id)
 
         except (json.JSONDecodeError, KeyError) as e:

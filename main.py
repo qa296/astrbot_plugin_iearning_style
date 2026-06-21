@@ -31,13 +31,11 @@ class IearningStylePlugin(Star):
         self.style_injector = StyleInjector(self.data_manager, self.config)
 
     async def initialize(self):
-        """异步的插件初始化方法。"""
         self.scheduler.start()
         logger.info("学习风格插件已加载并启动定时任务。")
 
     @filter.event_message_type(filter.EventMessageType.ALL)
     async def on_message(self, event: AstrMessageEvent):
-        """监听所有消息，记录到历史中用于后续分析。"""
         if event.get_sender_id() == event.get_self_id():
             return
 
@@ -57,7 +55,6 @@ class IearningStylePlugin(Star):
 
     @filter.on_llm_request()
     async def on_llm_request(self, event: AstrMessageEvent, req):
-        """在 LLM 请求前拦截并注入学习到的风格。"""
         session_id = event.unified_msg_origin
         user_message = event.get_message_str() or ""
 
@@ -69,7 +66,6 @@ class IearningStylePlugin(Star):
 
     @filter.command("风格状态")
     async def style_status(self, event: AstrMessageEvent):
-        """查看当前会话的风格学习状态"""
         session_id = event.unified_msg_origin
         summary = self.style_injector.get_style_summary(session_id)
 
@@ -79,11 +75,17 @@ class IearningStylePlugin(Star):
 
         response = "当前会话风格状态：\n"
         response += f"通用表征：{summary['universal_count']} 条\n"
+        response += f"情境表征：{summary['contextual_count']} 条\n"
         response += f"特定表征：{summary['specific_count']} 条\n"
 
         if summary["universal_preview"]:
             response += (
                 f"通用 Top-3：{', '.join(summary['universal_preview'])}\n"
+            )
+
+        if summary["contextual_preview"]:
+            response += (
+                f"情境 Top-3：{', '.join(summary['contextual_preview'])}\n"
             )
 
         if summary["specific_preview"]:
@@ -95,12 +97,14 @@ class IearningStylePlugin(Star):
 
     @filter.command("清空风格")
     async def clear_styles(self, event: AstrMessageEvent):
-        """清空当前会话学习到的所有风格"""
         session_id = event.unified_msg_origin
 
         if session_id in self.data_manager.universal:
             self.data_manager.universal[session_id] = []
             self.data_manager._dirty_universal = True
+        if session_id in self.data_manager.contextual:
+            self.data_manager.contextual[session_id] = []
+            self.data_manager._dirty_contextual = True
         if session_id in self.data_manager.specific:
             self.data_manager.specific[session_id] = []
             self.data_manager._dirty_specific = True
@@ -109,7 +113,6 @@ class IearningStylePlugin(Star):
         yield event.plain_result("已清空当前会话的所有学习风格。")
 
     async def terminate(self):
-        """异步的插件销毁方法。"""
         await self.scheduler.stop()
         await self.data_manager.force_save()
         logger.info("学习风格插件已卸载并停止定时任务。")

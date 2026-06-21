@@ -8,9 +8,9 @@ from .learning_manager import LearningManager
 
 class Scheduler:
     """
-    负责定时任务的调度。
+    定时任务调度：
     - analysis_task: 定期分析聊天记录（默认 1h）
-    - maintenance_task: 定期合并相似特定表征 + 容量检查（默认 24h）
+    - maintenance_task: 合并情境缓冲区到通用/特定（默认 24h）
     """
 
     def __init__(
@@ -27,7 +27,6 @@ class Scheduler:
         self.is_running = False
 
     def start(self):
-        """启动所有定时任务。"""
         if not self.is_running:
             self.is_running = True
             self.analysis_task = asyncio.create_task(self._run_analysis())
@@ -35,7 +34,6 @@ class Scheduler:
             logger.info("定时任务已启动。")
 
     async def stop(self):
-        """停止所有定时任务。"""
         if self.is_running:
             self.is_running = False
             tasks = []
@@ -55,7 +53,6 @@ class Scheduler:
             logger.info("定时任务已停止。")
 
     async def _run_analysis(self):
-        """定期分析聊天记录。"""
         analysis_interval = self.config.get("analysis_interval_seconds", 3600)
         while self.is_running:
             await asyncio.sleep(analysis_interval)
@@ -70,7 +67,6 @@ class Scheduler:
             await self.data_manager.force_save()
 
     async def _run_maintenance(self):
-        """定期维护：合并相似特定表征 + 容量检查。"""
         maintenance_interval = self.config.get("maintenance_interval_seconds", 86400)
         while self.is_running:
             await asyncio.sleep(maintenance_interval)
@@ -79,14 +75,13 @@ class Scheduler:
             await asyncio.sleep(0)
 
     async def _perform_maintenance(self):
-        """执行维护：合并相似特定表征，然后检查各会话容量。"""
-        all_sessions = list(self.data_manager.specific.keys())
+        """合并情境缓冲区到通用/特定，不处理已确认的情境。"""
+        all_sessions = list(self.data_manager.contextual.keys())
         for session_id in all_sessions:
             try:
-                self.data_manager.merge_similar_specific(session_id)
-                self.data_manager.check_specific_capacity(session_id)
+                self.data_manager.merge_contextual_buffer(session_id)
             except Exception as e:
                 logger.error(f"维护会话 {session_id} 时出错: {e}")
 
         await self.data_manager.force_save()
-        logger.info("风格维护完成（合并相似+容量清理）。")
+        logger.info("风格维护完成（情境缓冲合并）。")
