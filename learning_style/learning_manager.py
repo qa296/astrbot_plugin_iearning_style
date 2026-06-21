@@ -33,7 +33,7 @@ class LearningManager:
             llm_response = await self.context.get_using_provider().text_chat(
                 prompt=prompt,
                 contexts=[],
-                system_prompt="你是一个语言风格分析大师，请根据以下聊天记录，提取通用风格、场景行为和梗释义。",
+                system_prompt="你是一个群聊文化分析师，从聊天记录中提取这个群的说话风格、社交模式和内部梗。",
             )
 
             if llm_response.role == "assistant":
@@ -105,7 +105,7 @@ class LearningManager:
 """
 
         prompt = f"""
-请分析以下聊天记录，提取三类特征。
+分析以下聊天记录，提取该群的三层群聊文化特征。
 
 聊天记录：
 ```
@@ -115,7 +115,7 @@ class LearningManager:
 {promotion_section}
 {contextual_section}
 要求：
-1. 只返回有效的 JSON，不要包含任何解释性文字
+1. 只返回有效 JSON，不要解释
 2. 格式：
 {{
   "universal": ["特征1", "特征2"],
@@ -128,13 +128,20 @@ class LearningManager:
     ...
   ]
 }}
-3. universal 是稳定风格基调，至少1条最多10条，每条不超过20字。如果已有上一轮通用，从中保留合适的并可以加入新的
-4. contextual 是场景→行为模式（如"别人难过时"→"发猫猫图安慰"），scene 是触发条件，behavior 是具体反应，每条不超过20字。没有则留空
-5. specific 是具体梗/说法，content 包含释义（如"awsl（啊我死了）"），trigger_regex 是能匹配用户相关表达的正则。没有则留空
-6. trigger_regex 必须是合法正则
+
+3. universal 是"这个群整体说话是什么风格"——语气、用词习惯、聊天氛围。属于全群底色。
+   至少1条最多10条，每条不超过20字。如果已有上一轮，从中保留合适的并加入新的。
+
+4. contextual 是"群内存在什么社交模式"——某个场景出现时，群友会有怎样的固定反应。
+   格式为 scene（触发条件）→ behavior（群体反应）。没有则留空。
+   这是三层中最关键的一层。
+
+5. specific 是"群里在用什么内部梗/暗号/流行语"——带释义，让外人也能理解。
+   content 包含释义（如"xx（用于表达xxx）"），trigger_regex 是能匹配用户相关表达的正则。
+   trigger_regex 必须是合法正则。没有则留空。
 
 示例输出：
-{{"universal": ["语气活泼", "爱用短句"], "contextual": [{{"scene": "别人难过时", "behavior": "发猫猫图安慰"}}], "specific": [{{"content": "awsl（啊我死了，用于表达被可爱到", "trigger_regex": "awsl"}}]}}
+{{"universal": ["爱用表情包", "喜欢玩烂梗", "语气夸张"], "contextual": [{{"scene": "有人发消息", "behavior": "全员复读"}}, {{"scene": "群友自称萌新", "behavior": "不约而同装萌新"}], "specific": "content": "xx（表达喜欢的意思）", "trigger_regex": "xx|x"}}]}}
 """
         return prompt
 
