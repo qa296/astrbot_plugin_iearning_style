@@ -82,57 +82,36 @@ class LearningManager:
             ]
             contextual_hint = "\n".join(lines)
 
-        first_round = not universal_list
-
-        if first_round:
-            prompt = f"""
-请分析以下聊天记录，提取语言特征。
-
-聊天记录：
-```
-{history_str}
-```
-
-要求：
-1. 只返回有效的 JSON，不要包含任何解释性文字
-2. 格式：
-{{
-  "universal": ["特征1", "特征2"],
-  "contextual": [],
-  "specific": []
-}}
-3. universal 是稳定的通用风格基调（用词习惯、语气、句式和聊天中的应对习惯等），至少1条最多10条，每条不超过20字
-4. contextual 和 specific 在第一轮固定为空数组
-
-示例输出：
-{{"universal": ["语气活泼", "爱用短句", "喜欢加表情"], "contextual": [], "specific": []}}
+        # 仅非首轮才提供的上下文
+        universal_section = ""
+        if universal_str and universal_str != "(无)":
+            universal_section = f"""
+上一轮已确认的通用风格：
+{universal_str}
 """
-        else:
-            promotion_section = ""
-            if promotion_str:
-                promotion_section = f"""
+
+        promotion_section = ""
+        if promotion_str:
+            promotion_section = f"""
 以下特征频繁出现（触发次数≥{threshold}），请考虑是否应纳入通用：
 {promotion_str}
 """
 
-            contextual_section = ""
-            if contextual_hint:
-                contextual_section = f"""
+        contextual_section = ""
+        if contextual_hint:
+            contextual_section = f"""
 以下情境表征在观察中，判断是否可以合并到通用风格或特定梗释义中：
 {contextual_hint}
 """
 
-            prompt = f"""
+        prompt = f"""
 请分析以下聊天记录，提取三类特征。
 
 聊天记录：
 ```
 {history_str}
 ```
-
-上一轮已确认的通用风格：
-{universal_str}
-
+{universal_section}
 {promotion_section}
 {contextual_section}
 要求：
@@ -149,14 +128,13 @@ class LearningManager:
     ...
   ]
 }}
-3. universal 是稳定风格基调，从"上一轮通用"中保留合适的并可以加入新的
-4. contextual 是场景→行为模式，描述在某种社交场景下会怎么反应（如"别人难过时"→"发猫猫图安慰"）；scene 是触发条件，behavior 是具体反应；每条不超过20字
-5. specific 是具体梗/说法，content 包含释义（如"awsl（啊我死了，用于表达被可爱到）"），trigger_regex 是能匹配用户相关表达的正则
+3. universal 是稳定风格基调，至少1条最多10条，每条不超过20字。如果已有上一轮通用，从中保留合适的并可以加入新的
+4. contextual 是场景→行为模式（如"别人难过时"→"发猫猫图安慰"），scene 是触发条件，behavior 是具体反应，每条不超过20字。没有则留空
+5. specific 是具体梗/说法，content 包含释义（如"awsl（啊我死了）"），trigger_regex 是能匹配用户相关表达的正则。没有则留空
 6. trigger_regex 必须是合法正则
-7. 如果情境表征无法抽象为通用风格或具体梗，请保留在 contextual 中
 
 示例输出：
-{{"universal": ["语气活泼", "喜欢玩梗"], "contextual": [{{"scene": "别人难过时", "behavior": "发猫猫图安慰"}}], "specific": [{{"content": "awsl（啊我死了）", "trigger_regex": "awsl|啊我死了"}}]}}
+{{"universal": ["语气活泼", "爱用短句"], "contextual": [{{"scene": "别人难过时", "behavior": "发猫猫图安慰"}}], "specific": [{{"content": "awsl（啊我死了，用于表达被可爱到", "trigger_regex": "awsl"}}]}}
 """
         return prompt
 
