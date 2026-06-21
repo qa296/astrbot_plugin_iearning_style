@@ -1,14 +1,17 @@
-# -*- coding: utf-8 -*-
 import json
-from typing import Dict, List, Any
+from typing import Any
+
 from astrbot.api import logger
 from astrbot.api.star import Star
+
 from .data_manager import DataManager
+
 
 class LearningManager:
     """
     负责调用LLM进行学习和总结。
     """
+
     def __init__(self, star_instance: Star, data_manager: DataManager, config: dict):
         self.star = star_instance
         self.context = star_instance.context
@@ -34,12 +37,14 @@ class LearningManager:
             llm_response = await self.context.get_using_provider().text_chat(
                 prompt=prompt,
                 contexts=[],
-                system_prompt="你是一个语言风格分析大师，请根据以下聊天记录，总结语言风格和语法句式特点。"
+                system_prompt="你是一个语言风格分析大师，请根据以下聊天记录，总结语言风格和语法句式特点。",
             )
 
             if llm_response.role == "assistant":
                 # 解析并存储学习结果
-                await self._parse_and_store_results(session_id, llm_response.completion_text)
+                await self._parse_and_store_results(
+                    session_id, llm_response.completion_text
+                )
                 # 分析完成后清空当前会话的聊天记录，避免重复分析
                 await self.data_manager.clear_chat_history(session_id)
             else:
@@ -48,14 +53,16 @@ class LearningManager:
         except Exception as e:
             logger.error(f"分析学习过程中发生错误: {e}")
 
-    def _build_prompt(self, chat_history: List[Dict[str, Any]]) -> str:
+    def _build_prompt(self, chat_history: list[dict[str, Any]]) -> str:
         """
         根据聊天记录构建用于LLM分析的prompt。
 
         :param chat_history: 聊天记录列表。
         :return: 构建好的prompt字符串。
         """
-        history_str = "\n".join([f"{msg['sender']}: {msg['content']}" for msg in chat_history])
+        history_str = "\n".join(
+            [f"{msg['sender']}: {msg['content']}" for msg in chat_history]
+        )
         prompt = f"""
         请分析以下聊天记录，并提取语言风格和语法句式特点：
 
@@ -86,25 +93,30 @@ class LearningManager:
         try:
             # 使用正则表达式更精确地提取JSON
             import re
-            json_pattern = r'```json\s*(\{.*?\})\s*```|(\{.*?\})'
+
+            json_pattern = r"```json\s*(\{.*?\})\s*```|(\{.*?\})"
             match = re.search(json_pattern, llm_output, re.DOTALL)
-            
+
             if match:
                 json_str = match.group(1) if match.group(1) else match.group(2)
             else:
                 # 回退到原始方法
-                json_str = llm_output[llm_output.find('{'):llm_output.rfind('}')+1]
-            
+                json_str = llm_output[llm_output.find("{") : llm_output.rfind("}") + 1]
+
             results = json.loads(json_str)
-            
+
             language_styles = results.get("language_style", [])
             grammar_features = results.get("grammar_feature", [])
 
             for style in language_styles:
-                await self.data_manager.add_or_update_style(session_id, style, "language_style")
-            
+                await self.data_manager.add_or_update_style(
+                    session_id, style, "language_style"
+                )
+
             for feature in grammar_features:
-                await self.data_manager.add_or_update_style(session_id, feature, "grammar_feature")
+                await self.data_manager.add_or_update_style(
+                    session_id, feature, "grammar_feature"
+                )
 
             logger.info(f"为会话 {session_id} 学习到新的风格和特点。")
 

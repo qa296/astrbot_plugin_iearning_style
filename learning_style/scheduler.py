@@ -1,13 +1,19 @@
 import asyncio
+
 from astrbot.api import logger
+
 from .data_manager import DataManager
 from .learning_manager import LearningManager
+
 
 class Scheduler:
     """
     负责定时任务的调度。
     """
-    def __init__(self, data_manager: DataManager, learning_manager: LearningManager, config: dict):
+
+    def __init__(
+        self, data_manager: DataManager, learning_manager: LearningManager, config: dict
+    ):
         self.data_manager = data_manager
         self.learning_manager = learning_manager
         self.config = config
@@ -38,14 +44,14 @@ class Scheduler:
             if self.maintenance_task:
                 self.maintenance_task.cancel()
                 tasks.append(self.maintenance_task)
-            
+
             # 等待任务完全停止
             if tasks:
                 try:
                     await asyncio.gather(*tasks, return_exceptions=True)
                 except asyncio.CancelledError:
                     pass
-            
+
             logger.info("定时任务已停止。")
 
     async def _run_analysis(self):
@@ -93,11 +99,15 @@ class Scheduler:
         for session_id, styles in self.data_manager.styles.items():
             for style in styles:
                 # 简单的线性衰减，可以根据需求调整
-                time_since_update = current_time - style.get("last_updated", current_time)
+                time_since_update = current_time - style.get(
+                    "last_updated", current_time
+                )
                 # 根据维护周期和每日衰减率计算衰减量
                 decay_amount = int(time_since_update / 86400) * decay_rate
                 if decay_amount > 0:
-                    style["proficiency"] = max(0, style.get("proficiency", 0) - decay_amount)
+                    style["proficiency"] = max(
+                        0, style.get("proficiency", 0) - decay_amount
+                    )
                     style["last_updated"] = current_time
         await self.data_manager.save_styles()
         logger.info("风格熟练度衰减完成。")
@@ -108,7 +118,9 @@ class Scheduler:
         """
         # 清理熟练度为0的风格
         for session_id, styles in self.data_manager.styles.items():
-            self.data_manager.styles[session_id] = [s for s in styles if s.get("proficiency", 0) > 0]
+            self.data_manager.styles[session_id] = [
+                s for s in styles if s.get("proficiency", 0) > 0
+            ]
 
         # 处理容量限制
         max_styles = self.config.get("max_styles_per_session", 100)
