@@ -112,6 +112,43 @@ class IearningStylePlugin(Star):
         asyncio.create_task(self.data_manager._schedule_save())
         yield event.plain_result("已清空当前会话的所有学习风格。")
 
+    @filter.command("学习总结")
+    async def learn_now(self, event: AstrMessageEvent):
+        """手动触发当前会话的学习分析"""
+        session_id = event.unified_msg_origin
+
+        chat_history = self.data_manager.get_chat_history(session_id, limit=100)
+        min_history = self.config.get("min_history_for_analysis", 10)
+        if len(chat_history) < min_history:
+            yield event.plain_result(
+                f"当前会话聊天记录不足 {min_history} 条，无法进行分析。"
+            )
+            return
+
+        yield event.plain_result("正在分析聊天记录并学习风格特征，请稍候...")
+
+        try:
+            await self.learning_manager.analyze_and_learn(session_id)
+
+            summary = self.style_injector.get_style_summary(session_id)
+            response = "学习分析完成！\n"
+            response += f"通用表征：{summary['universal_count']} 条\n"
+            response += f"情境表征：{summary['contextual_count']} 条\n"
+            response += f"特定表征：{summary['specific_count']} 条"
+
+            if summary["universal_preview"]:
+                response += f"\n通用 Top-3：{', '.join(summary['universal_preview'])}"
+            if summary["contextual_preview"]:
+                response += f"\n情境 Top-3：{', '.join(summary['contextual_preview'])}"
+            if summary["specific_preview"]:
+                response += f"\n特定 Top-3：{', '.join(summary['specific_preview'])}"
+
+            yield event.plain_result(response)
+
+        except Exception as e:
+            logger.error(f"手动触发学习分析失败: {e}")
+            yield event.plain_result(f"学习分析失败：{e}")
+
     async def terminate(self):
         await self.scheduler.stop()
         await self.data_manager.force_save()
