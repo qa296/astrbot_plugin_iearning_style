@@ -60,19 +60,6 @@ class LearningManager:
             [f"- {c}" for c in universal_list]
         ) if universal_list else "(无)"
 
-        # 待升格特定表征
-        threshold = self.config.get("specific_promotion_threshold", 5)
-        promotion_candidates = self.data_manager.get_specific_for_promotion(
-            session_id, threshold
-        )
-        promotion_str = ""
-        if promotion_candidates:
-            lines = [
-                f"- {t['content']} (触发 {t['trigger_count']} 次)"
-                for t in promotion_candidates
-            ]
-            promotion_str = "\n".join(lines)
-
         # 情境缓冲区提示
         buffer_items = self.data_manager.get_contextual_buffer(session_id)
         contextual_hint = ""
@@ -90,13 +77,6 @@ class LearningManager:
 {universal_str}
 """
 
-        promotion_section = ""
-        if promotion_str:
-            promotion_section = f"""
-以下特征频繁出现（触发次数≥{threshold}），请考虑是否应纳入通用：
-{promotion_str}
-"""
-
         contextual_section = ""
         if contextual_hint:
             contextual_section = f"""
@@ -112,7 +92,6 @@ class LearningManager:
 {history_str}
 ```
 {universal_section}
-{promotion_section}
 {contextual_section}
 要求：
 1. 只返回有效 JSON，不要解释

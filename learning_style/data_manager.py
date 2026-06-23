@@ -303,15 +303,6 @@ class DataManager:
         self._dirty_specific = True
         asyncio.create_task(self._schedule_save())
 
-    def get_specific_for_promotion(
-        self, session_id: str, threshold: int
-    ) -> list[dict[str, Any]]:
-        return [
-            t
-            for t in self.specific.get(session_id, [])
-            if t.get("trigger_count", 0) >= threshold
-        ]
-
     def remove_lowest_specific(self, session_id: str, count: int):
         if session_id not in self.specific or count <= 0:
             return
