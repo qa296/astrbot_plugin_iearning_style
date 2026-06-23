@@ -1,4 +1,3 @@
-import re
 from typing import Any
 
 from astrbot.api import logger
@@ -11,7 +10,7 @@ class StyleInjector:
     三层表征注入：
     - 通用：全部注入
     - 情境：全部注入（LLM 自行判断场景匹配）
-    - 特定：trigger_regex 匹配当前消息后注入
+    - 特定：全部注入（LLM 自行判断使用时机）
     """
 
     def __init__(self, data_manager, config: dict[str, Any]):
@@ -29,7 +28,7 @@ class StyleInjector:
         return bool(universal) or bool(contextual) or bool(specific)
 
     def inject_style_to_prompt(
-        self, session_id: str, original_system_prompt: str, user_message: str = ""
+        self, session_id: str, original_system_prompt: str
     ) -> str:
         if not self.should_inject_style(session_id):
             return original_system_prompt
@@ -52,22 +51,12 @@ class StyleInjector:
                     self.style_selector.build_contextual_text(contextual)
                 )
 
-            # 3. 特定表征：按 trigger_regex 匹配当前消息
+            # 3. 特定表征：全部注入，LLM 自行判断使用时机
             specific = self.data_manager.get_specific_for_session(session_id)
-            matched = []
-            for trait in specific:
-                regex = trait.get("trigger_regex", "")
-                content = trait.get("content", "")
-                if regex and content and user_message:
-                    try:
-                        if re.search(regex, user_message):
-                            matched.append(content)
-                    except re.error:
-                        continue
-
-            if matched and user_message:
+            if specific:
+                contents = [t["content"] for t in specific]
                 style_parts.append(
-                    self.style_selector.build_style_text("当前话题相关说法", matched)
+                    self.style_selector.build_style_text("群内流行说法", contents)
                 )
 
             if not style_parts:

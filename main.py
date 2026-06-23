@@ -56,11 +56,10 @@ class IearningStylePlugin(Star):
     @filter.on_llm_request()
     async def on_llm_request(self, event: AstrMessageEvent, req):
         session_id = event.unified_msg_origin
-        user_message = event.get_message_str() or ""
 
         original_prompt = req.system_prompt or ""
         new_prompt = self.style_injector.inject_style_to_prompt(
-            session_id, original_prompt, user_message=user_message
+            session_id, original_prompt
         )
         req.system_prompt = new_prompt
 
