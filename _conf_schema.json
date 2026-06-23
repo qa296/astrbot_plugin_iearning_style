@@ -32,8 +32,8 @@
   "max_contextual_per_session": {
     "type": "int",
     "description": "每个会话的最大情境表征容量",
-    "hint": "每个会话最多可以存储多少条情境表征。超过此上限将按 FIFO 淘汰最早的。默认值为 50。",
-    "default": 50
+    "hint": "每个会话最多可以存储多少条情境表征。超过此上限将按 FIFO 淘汰最早的。默认值为 150。",
+    "default": 150
   },
   "enable_style_injection": {
     "type": "bool",
