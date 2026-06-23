@@ -14,7 +14,7 @@ from .learning_style.style_injector import StyleInjector
     "astrbot_plugin_iearning_style",
     "qa296",
     "从聊天中学习他人说话方式。",
-    "0.2.0",
+    "0.2.1",
     "https://github.com/qa296/astrbot_plugin_iearning_style",
 )
 class IearningStylePlugin(Star):
