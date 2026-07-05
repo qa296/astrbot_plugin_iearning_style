@@ -21,6 +21,22 @@ class LearningManager:
         self.data_manager = data_manager
         self.config = config
 
+    def _get_provider(self):
+        """根据配置选择学习分析用的 LLM 提供商。
+
+        配置了 llm_provider_id 时优先用指定提供商；
+        找不到或未配置时回退到系统当前默认对话模型。
+        """
+        provider_id = self.config.get("llm_provider_id", "")
+        if provider_id:
+            prov = self.context.get_provider_by_id(provider_id)
+            if prov is not None:
+                return prov
+            logger.warning(
+                f"配置的学习提供商 ID '{provider_id}' 未找到，回退到默认对话模型。"
+            )
+        return self.context.get_using_provider()
+
     async def analyze_and_learn(self, session_id: str):
         min_history = self.config.get("min_history_for_analysis", 10)
         chat_history = self.data_manager.get_chat_history(session_id, limit=100)
@@ -30,7 +46,12 @@ class LearningManager:
         prompt = self._build_prompt(session_id, chat_history)
 
         try:
-            llm_response = await self.context.get_using_provider().text_chat(
+            provider = self._get_provider()
+            if provider is None:
+                logger.warning("未找到可用的 LLM 提供商，跳过本次学习分析。")
+                return
+
+            llm_response = await provider.text_chat(
                 prompt=prompt,
                 contexts=[],
                 system_prompt="你是一个群聊文化分析师，从聊天记录中提取这个群的说话风格、社交模式和内部梗。",
