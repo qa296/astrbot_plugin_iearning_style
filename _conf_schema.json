@@ -1,4 +1,11 @@
 {
+  "llm_provider_id": {
+    "type": "string",
+    "description": "学习分析使用的 LLM 提供商",
+    "hint": "选择用于聊天记录学习分析的 LLM 提供商（模型）。留空则使用系统当前默认对话模型。",
+    "_special": "select_provider",
+    "default": ""
+  },
   "analysis_interval_seconds": {
     "type": "int",
     "description": "聊天记录分析频率（秒）",
