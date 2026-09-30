@@ -8,13 +8,13 @@ from typing import Any
 from astrbot.api import logger
 
 
-# 情境表征缓冲比例（硬编码）
+# 情境特征缓冲比例（硬编码）
 CONTEXTUAL_BUFFER_RATIO = 0.2  # 20% 为缓冲位
 
 
 class DataManager:
     """
-    三层表征管理：
+    三层特征管理：
     - 通用（universal）：稳定风格基调，LLM 全量重写
     - 情境（contextual）：场景→行为模式，FIFO 容量管理 + 缓冲合并
     - 特定（specific）：梗+释义，trigger_regex 匹配
@@ -62,7 +62,7 @@ class DataManager:
             )
             os.rename(old_file, old_file + ".bak")
 
-    # ==================== 通用表征 ====================
+    # ==================== 通用特征 ====================
 
     def load_universal(self):
         if os.path.exists(self.universal_file):
@@ -70,7 +70,7 @@ class DataManager:
                 with open(self.universal_file, encoding="utf-8") as f:
                     self.universal = json.load(f)
             except (OSError, json.JSONDecodeError) as e:
-                logger.error(f"加载通用表征文件失败: {e}")
+                logger.error(f"加载通用特征文件失败: {e}")
                 self.universal = {}
         else:
             self.universal = {}
@@ -80,9 +80,9 @@ class DataManager:
 
     def replace_universal(self, session_id: str, contents: list[str]):
         """
-        全量替换通用表征。
-        - 延续的表征 proficiency +5，confirmed_rounds +1
-        - 新增的表征 proficiency=10，confirmed_rounds=1
+        全量替换通用特征。
+        - 延续的特征 proficiency +5，confirmed_rounds +1
+        - 新增的特征 proficiency=10，confirmed_rounds=1
         """
         current_time = asyncio.get_running_loop().time()
         old_map = {}
@@ -118,9 +118,9 @@ class DataManager:
                     json.dump(self.universal, f, ensure_ascii=False, indent=4)
                 self._dirty_universal = False
             except OSError as e:
-                logger.error(f"保存通用表征文件失败: {e}")
+                logger.error(f"保存通用特征文件失败: {e}")
 
-    # ==================== 情境表征 ====================
+    # ==================== 情境特征 ====================
 
     def load_contextual(self):
         if os.path.exists(self.contextual_file):
@@ -128,7 +128,7 @@ class DataManager:
                 with open(self.contextual_file, encoding="utf-8") as f:
                     self.contextual = json.load(f)
             except (OSError, json.JSONDecodeError) as e:
-                logger.error(f"加载情境表征文件失败: {e}")
+                logger.error(f"加载情境特征文件失败: {e}")
                 self.contextual = {}
         else:
             self.contextual = {}
@@ -137,7 +137,7 @@ class DataManager:
         return self.contextual.get(session_id, [])
 
     def get_contextual_buffer(self, session_id: str) -> list[dict[str, Any]]:
-        """仅返回缓冲位中的情境表征（供维护合并用）。"""
+        """仅返回缓冲位中的情境特征（供维护合并用）。"""
         return [
             t
             for t in self.contextual.get(session_id, [])
@@ -146,7 +146,7 @@ class DataManager:
 
     def add_contextual(self, session_id: str, scene: str, behavior: str):
         """
-        添加情境表征。
+        添加情境特征。
         - FIFO 添加，标记为缓冲位
         - 超容量 50 时淘汰最早的
         - 自动调整缓冲位标记（最新 20% 为缓冲）
@@ -167,7 +167,7 @@ class DataManager:
         while len(self.contextual[session_id]) > max_capacity:
             removed = self.contextual[session_id].pop(0)
             logger.debug(
-                f"FIFO 淘汰情境表征: {removed.get('scene', '?')}→{removed.get('behavior', '?')}"
+                f"FIFO 淘汰情境特征: {removed.get('scene', '?')}→{removed.get('behavior', '?')}"
             )
 
         # 重新标记缓冲位（最新 20%）
@@ -176,7 +176,7 @@ class DataManager:
         asyncio.create_task(self._schedule_save())
 
     def _refresh_buffer_markers(self, session_id: str):
-        """重新计算并标记情境表征的缓冲位。"""
+        """重新计算并标记情境特征的缓冲位。"""
         traits = self.contextual.get(session_id, [])
         if not traits:
             return
@@ -194,7 +194,7 @@ class DataManager:
 
     def merge_contextual_buffer(self, session_id: str, threshold: float = 0.85):
         """
-        将缓冲位的情境表征尝试合并到通用/特定。
+        将缓冲位的情境特征尝试合并到通用/特定。
         遍历缓冲条目，按 scene→behavior 文本相似度：
         1. 跟通用比对 → 匹配则合并proficiency，从情境移除
         2. 跟特定比对 → 匹配则合并trigger_count，从情境移除
@@ -252,9 +252,9 @@ class DataManager:
                     json.dump(self.contextual, f, ensure_ascii=False, indent=4)
                 self._dirty_contextual = False
             except OSError as e:
-                logger.error(f"保存情境表征文件失败: {e}")
+                logger.error(f"保存情境特征文件失败: {e}")
 
-    # ==================== 特定表征 ====================
+    # ==================== 特定特征 ====================
 
     def load_specific(self):
         if os.path.exists(self.specific_file):
@@ -262,7 +262,7 @@ class DataManager:
                 with open(self.specific_file, encoding="utf-8") as f:
                     self.specific = json.load(f)
             except (OSError, json.JSONDecodeError) as e:
-                logger.error(f"加载特定表征文件失败: {e}")
+                logger.error(f"加载特定特征文件失败: {e}")
                 self.specific = {}
         else:
             self.specific = {}
@@ -277,7 +277,7 @@ class DataManager:
             re.compile(trigger_regex)
         except re.error as e:
             logger.error(
-                f"特定表征 '{content}' 的正则表达式无效: {trigger_regex}, 错误: {e}"
+                f"特定特征 '{content}' 的正则表达式无效: {trigger_regex}, 错误: {e}"
             )
             return
 
@@ -326,7 +326,7 @@ class DataManager:
                     json.dump(self.specific, f, ensure_ascii=False, indent=4)
                 self._dirty_specific = False
             except OSError as e:
-                logger.error(f"保存特定表征文件失败: {e}")
+                logger.error(f"保存特定特征文件失败: {e}")
 
     # ==================== 公共保存逻辑 ====================
 

@@ -73,9 +73,9 @@ class IearningStylePlugin(Star):
             return
 
         response = "当前会话风格状态：\n"
-        response += f"通用表征：{summary['universal_count']} 条\n"
-        response += f"情境表征：{summary['contextual_count']} 条\n"
-        response += f"特定表征：{summary['specific_count']} 条\n"
+        response += f"通用特征：{summary['universal_count']} 条\n"
+        response += f"情境特征：{summary['contextual_count']} 条\n"
+        response += f"特定特征：{summary['specific_count']} 条\n"
 
         if summary["universal_preview"]:
             response += (
@@ -131,9 +131,9 @@ class IearningStylePlugin(Star):
 
             summary = self.style_injector.get_style_summary(session_id)
             response = "学习分析完成！\n"
-            response += f"通用表征：{summary['universal_count']} 条\n"
-            response += f"情境表征：{summary['contextual_count']} 条\n"
-            response += f"特定表征：{summary['specific_count']} 条"
+            response += f"通用特征：{summary['universal_count']} 条\n"
+            response += f"情境特征：{summary['contextual_count']} 条\n"
+            response += f"特定特征：{summary['specific_count']} 条"
 
             if summary["universal_preview"]:
                 response += f"\n通用 Top-3：{', '.join(summary['universal_preview'])}"

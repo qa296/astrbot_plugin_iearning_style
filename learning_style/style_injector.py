@@ -7,7 +7,7 @@ from .style_selector import StyleSelector
 
 class StyleInjector:
     """
-    三层表征注入：
+    三层特征注入：
     - 通用：全部注入
     - 情境：全部注入（LLM 自行判断场景匹配）
     - 特定：全部注入（LLM 自行判断使用时机）
@@ -36,7 +36,7 @@ class StyleInjector:
         try:
             style_parts = []
 
-            # 1. 通用表征：全部注入
+            # 1. 通用特征：全部注入
             universal = self.data_manager.get_universal_for_session(session_id)
             if universal:
                 contents = [t["content"] for t in universal]
@@ -44,14 +44,14 @@ class StyleInjector:
                     self.style_selector.build_style_text("通用风格", contents)
                 )
 
-            # 2. 情境表征：全部注入
+            # 2. 情境特征：全部注入
             contextual = self.data_manager.get_contextual_for_session(session_id)
             if contextual:
                 style_parts.append(
                     self.style_selector.build_contextual_text(contextual)
                 )
 
-            # 3. 特定表征：全部注入，LLM 自行判断使用时机
+            # 3. 特定特征：全部注入，LLM 自行判断使用时机
             specific = self.data_manager.get_specific_for_session(session_id)
             if specific:
                 contents = [t["content"] for t in specific]

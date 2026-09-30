@@ -15,7 +15,7 @@
   "maintenance_interval_seconds": {
     "type": "int",
     "description": "风格维护任务频率（秒）",
-    "hint": "插件每隔多少秒进行一次表征合并和容量清理。默认值为 86400 (24小时)。",
+    "hint": "插件每隔多少秒进行一次特征合并和容量清理。默认值为 86400 (24小时)。",
     "default": 86400
   },
   "min_history_for_analysis": {
@@ -26,14 +26,14 @@
   },
   "max_specific_per_session": {
     "type": "int",
-    "description": "每个会话的最大特定表征容量",
-    "hint": "每个会话最多可以存储多少条特定表征。超过此上限将淘汰触发次数最低的。默认值为 200。",
+    "description": "每个会话的最大特定特征容量",
+    "hint": "每个会话最多可以存储多少条特定特征。超过此上限将淘汰触发次数最低的。默认值为 200。",
     "default": 200
   },
   "max_contextual_per_session": {
     "type": "int",
-    "description": "每个会话的最大情境表征容量",
-    "hint": "每个会话最多可以存储多少条情境表征。超过此上限将按 FIFO 淘汰最早的。默认值为 150。",
+    "description": "每个会话的最大情境特征容量",
+    "hint": "每个会话最多可以存储多少条情境特征。超过此上限将按 FIFO 淘汰最早的。默认值为 150。",
     "default": 150
   },
   "enable_style_injection": {

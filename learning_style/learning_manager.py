@@ -11,7 +11,7 @@ from .data_manager import DataManager
 class LearningManager:
     """
     负责调用 LLM 进行学习和总结。
-    输入：[本轮对话] + [上轮通用表征] + [待升格特定提示] + [情境缓冲区提示]
+    输入：[本轮对话] + [上轮通用特征] + [待升格特定提示] + [情境缓冲区提示]
     输出：{universal, contextual, specific}
     """
 
@@ -101,7 +101,7 @@ class LearningManager:
         contextual_section = ""
         if contextual_hint:
             contextual_section = f"""
-以下情境表征在观察中，判断是否可以合并到通用风格或特定梗释义中：
+以下情境特征在观察中，判断是否可以合并到通用风格或特定梗释义中：
 {contextual_hint}
 """
 
@@ -156,13 +156,13 @@ class LearningManager:
 
             results = json.loads(json_str)
 
-            # 通用表征：全量替换
+            # 通用特征：全量替换
             universal = results.get("universal", [])
             if universal:
                 self.data_manager.replace_universal(session_id, universal)
-                logger.info(f"为会话 {session_id} 更新通用表征: {universal}")
+                logger.info(f"为会话 {session_id} 更新通用特征: {universal}")
 
-            # 情境表征：逐条添加
+            # 情境特征：逐条添加
             contextual = results.get("contextual", [])
             for item in contextual:
                 scene = item.get("scene", "")
@@ -172,11 +172,11 @@ class LearningManager:
 
             if contextual:
                 logger.info(
-                    f"为会话 {session_id} 添加情境表征: "
+                    f"为会话 {session_id} 添加情境特征: "
                     f"{[f'{c['scene']}→{c['behavior']}' for c in contextual]}"
                 )
 
-            # 特定表征：逐条添加
+            # 特定特征：逐条添加
             specific = results.get("specific", [])
             for item in specific:
                 content = item.get("content", "")
@@ -188,7 +188,7 @@ class LearningManager:
 
             if specific:
                 logger.info(
-                    f"为会话 {session_id} 添加特定表征: {[s['content'] for s in specific]}"
+                    f"为会话 {session_id} 添加特定特征: {[s['content'] for s in specific]}"
                 )
 
             self.data_manager.check_specific_capacity(session_id)

@@ -2,7 +2,7 @@ from typing import Any
 
 
 class StyleSelector:
-    """将各类表征列表构建成人类可读的提示文本。"""
+    """将各类特征列表构建成人类可读的提示文本。"""
 
     @staticmethod
     def build_style_text(label: str, contents: list[str]) -> str:
@@ -13,7 +13,7 @@ class StyleSelector:
     @staticmethod
     def build_contextual_text(contextuals: list[dict[str, Any]]) -> str:
         """
-        将情境表征列表构建为提示文本。
+        将情境特征列表构建为提示文本。
 
         :param contextuals: [{scene, behavior}, ...]
         :return: "情境提示：场景1→行为1；场景2→行为2"
