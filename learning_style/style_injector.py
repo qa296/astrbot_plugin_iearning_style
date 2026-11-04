@@ -63,6 +63,15 @@ class StyleInjector:
                 return original_system_prompt
 
             style_text = "；".join(style_parts)
+            enhanced = self.config.get("enable_enhanced_guidance", False)
+
+            if enhanced:
+                full_style_text = f"你需要在回复中主动且自然的体现以下风格要求：{style_text}"
+                if not original_system_prompt.strip():
+                    return full_style_text
+                new_prompt = f"{full_style_text}\n\n{original_system_prompt}"
+                return new_prompt
+
             full_style_text = f"在回复时，请尽量采用以下风格特点：{style_text}"
 
             if not original_system_prompt.strip():

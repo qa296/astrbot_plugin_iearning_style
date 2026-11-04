@@ -36,6 +36,12 @@
     "hint": "每个会话最多可以存储多少条情境特征。超过此上限将按 FIFO 淘汰最早的。默认值为 150。",
     "default": 150
   },
+  "enable_enhanced_guidance": {
+    "type": "bool",
+    "description": "启用强化引导",
+    "hint": "开启后，注入风格时要求 LLM 更主动体现学习到的风格要求。",
+    "default": true
+  },
   "enable_style_injection": {
     "type": "bool",
     "description": "启用风格注入",
